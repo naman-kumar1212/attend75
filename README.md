@@ -184,4 +184,4 @@ Connect on [LinkedIn](https://www.linkedin.com/in/naman-kumar-0980aa293/) or [Gi
 
 ## License
 
-This project is licensed under the **[MIT License](LICENCE)**.
+This project is licensed under the [MIT License](LICENSE).
