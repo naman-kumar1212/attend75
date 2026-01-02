@@ -1,0 +1,6 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Disabled because we properly guard with mounted checks
+    use_build_context_synchronously: false
