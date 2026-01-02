@@ -48,9 +48,9 @@ The project follows a clean, layered architecture emphasizing separation of conc
 
 ```mermaid
 graph TD
-    UI[UI Layer (Widgets)] -->|Events| Provider[Provider Layer (Business Logic)]
-    Provider -->|Calls| Service[Service Layer (Data Access)]
-    Service -->|Auth/Data| Supabase[Supabase Client]
+    UI[UI Layer Widgets] -->|Events| Provider[Provider Layer Business Logic]
+    Provider -->|Calls| Service[Service Layer Data Access]
+    Service -->|Auth Data| Supabase[Supabase Client]
     Service -->|Cache| Local[Shared Preferences]
     Supabase <-->|Sync| Cloud[(PostgreSQL)]
 ```
@@ -180,8 +180,8 @@ The application uses **Provider** for dependency injection and state management 
 ## Author
 
 Developed by **Naman**.
-Connect on [LinkedIn](https://linkedin.com) or [GitHub](https://github.com).
+Connect on [LinkedIn](https://www.linkedin.com/in/naman-kumar-0980aa293/) or [GitHub](https://github.com/naman-kumar1212).
 
 ## License
 
-This project is licensed under the **MIT License**.
+This project is licensed under the **[MIT License](LICENCE)**.
