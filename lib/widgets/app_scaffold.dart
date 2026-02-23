@@ -4,6 +4,23 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import 'app_menu_drawer.dart';
+import 'responsive_layout.dart';
+
+/// Navigation items configuration for consistent use across layouts
+class _NavItem {
+  final IconData icon;
+  final String label;
+
+  const _NavItem(this.icon, this.label);
+}
+
+const List<_NavItem> _navItems = [
+  _NavItem(LucideIcons.home, 'Home'),
+  _NavItem(LucideIcons.barChart3, 'Dashboard'),
+  _NavItem(LucideIcons.bookOpen, 'Subjects'),
+  _NavItem(LucideIcons.clock, 'Duty Leave'),
+  _NavItem(LucideIcons.settings, 'Settings'),
+];
 
 class AppScaffold extends StatefulWidget {
   final Widget child;
@@ -22,10 +39,22 @@ class AppScaffold extends StatefulWidget {
 }
 
 class _AppScaffoldState extends State<AppScaffold> {
+  // Track hover state for NavigationRail items
+  int? _hoveredIndex;
+
   @override
   Widget build(BuildContext context) {
-    return _buildMobileLayout(context);
+    // Use responsive layout to switch between mobile and desktop
+    return ResponsiveLayout(
+      mobile: _buildMobileLayout(context),
+      tablet: _buildDesktopLayout(context), // Tablet uses NavigationRail too
+      desktop: _buildDesktopLayout(context),
+    );
   }
+
+  // ============================================
+  // MOBILE LAYOUT (BottomNavigationBar)
+  // ============================================
 
   Widget _buildMobileLayout(BuildContext context) {
     // Content extends behind glass header (no Padding wrapper here)
@@ -40,6 +69,170 @@ class _AppScaffoldState extends State<AppScaffold> {
       bottomNavigationBar: _buildGlassNavigationBar(context),
     );
   }
+
+  // ============================================
+  // DESKTOP LAYOUT (NavigationRail + AppBar)
+  // ============================================
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: _buildDesktopAppBar(context),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // NavigationRail on the left
+          _buildNavigationRail(context, isDark, colorScheme),
+
+          // Vertical divider for visual separation
+          VerticalDivider(
+            thickness: 1,
+            width: 1,
+            color: colorScheme.outline.withValues(alpha: 0.1),
+          ),
+
+          // Main content area
+          Expanded(child: widget.child),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildDesktopAppBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AppBar(
+      backgroundColor: colorScheme.surface,
+      elevation: 0,
+      centerTitle: false,
+      surfaceTintColor: Colors.transparent,
+      systemOverlayStyle: isDark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      title: Text(
+        'Attend 75',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+          color: colorScheme.onSurface,
+        ),
+      ),
+      actions: [
+        Builder(
+          builder: (context) => IconButton(
+            icon: Icon(LucideIcons.menu, color: colorScheme.onSurface),
+            onPressed: () => _openMenu(context),
+            tooltip: 'Open menu',
+          ),
+        ),
+        const SizedBox(width: 16),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          height: 1,
+          color: colorScheme.outline.withValues(alpha: 0.1),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavigationRail(
+    BuildContext context,
+    bool isDark,
+    ColorScheme colorScheme,
+  ) {
+    final selectedColor = colorScheme.primary;
+    final unselectedColor = colorScheme.onSurface.withValues(alpha: 0.55);
+    final hoverColor = colorScheme.primary.withValues(alpha: 0.08);
+
+    return Container(
+      width: 80,
+      color: isDark
+          ? colorScheme.surface.withValues(alpha: 0.5)
+          : colorScheme.surface,
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          // Navigation items
+          ...List.generate(_navItems.length, (index) {
+            final item = _navItems[index];
+            final isSelected = widget.currentIndex == index;
+            final isHovered = _hoveredIndex == index;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _hoveredIndex = index),
+                onExit: (_) => setState(() => _hoveredIndex = null),
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => widget.onNavigationChanged(index),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      // User requested to remove the background color on selected items
+                      // and only show the colored icon/text.
+                      color: isHovered ? hoverColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedScale(
+                          scale: isSelected ? 1.08 : 1.0,
+                          duration: const Duration(milliseconds: 120),
+                          curve: Curves.easeOut,
+                          child: Icon(
+                            item.icon,
+                            color: isSelected
+                                ? selectedColor
+                                : isHovered
+                                ? colorScheme.onSurface
+                                : unselectedColor,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          style: TextStyle(
+                            color: isSelected
+                                ? selectedColor
+                                : isHovered
+                                ? colorScheme.onSurface
+                                : unselectedColor,
+                            fontSize: 11,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ============================================
+  // SHARED COMPONENTS (Mobile)
+  // ============================================
 
   PreferredSizeWidget _buildGlassAppBar(BuildContext context) {
     // Determine the base color for the glass effect based on the theme
@@ -173,13 +366,15 @@ class _AppScaffoldState extends State<AppScaffold> {
               bottom: true,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildNavItem(context, 0, LucideIcons.home, 'Home'),
-                  _buildNavItem(context, 1, LucideIcons.barChart3, 'Dashboard'),
-                  _buildNavItem(context, 2, LucideIcons.bookOpen, 'Subjects'),
-                  _buildNavItem(context, 3, LucideIcons.clock, 'Duty Leave'),
-                  _buildNavItem(context, 4, LucideIcons.settings, 'Settings'),
-                ],
+                children: List.generate(
+                  _navItems.length,
+                  (index) => _buildMobileNavItem(
+                    context,
+                    index,
+                    _navItems[index].icon,
+                    _navItems[index].label,
+                  ),
+                ),
               ),
             ),
           ),
@@ -188,7 +383,7 @@ class _AppScaffoldState extends State<AppScaffold> {
     );
   }
 
-  Widget _buildNavItem(
+  Widget _buildMobileNavItem(
     BuildContext context,
     int index,
     IconData icon,
@@ -237,10 +432,15 @@ class _AppScaffoldState extends State<AppScaffold> {
     );
   }
 
+  // ============================================
+  // MENU DIALOG (Shared)
+  // ============================================
+
   void _openMenu(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
     final topOffset = topPadding + kToolbarHeight;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isDesktop = ResponsiveLayout.isDesktop(context);
 
     showGeneralDialog(
       context: context,
@@ -252,7 +452,11 @@ class _AppScaffoldState extends State<AppScaffold> {
         return Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: EdgeInsets.only(top: topOffset, bottom: bottomInset),
+            // Desktop: No top offset since AppBar is not transparent
+            padding: EdgeInsets.only(
+              top: isDesktop ? 0 : topOffset,
+              bottom: bottomInset,
+            ),
             child: SizedBox(
               width: MediaQuery.of(context).size.width > 400
                   ? 360

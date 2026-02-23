@@ -7,9 +7,16 @@ import 'supabase_service.dart';
 class AuthService {
   final SupabaseClient _client = SupabaseService.client;
 
-  /// Redirect URL for email verification deep link
+  /// Redirect URL for email verification deep link (mobile)
   static const String emailRedirectUrl =
-      'com.example.attend75://login-callback';
+      'com.namankumar.attend75://login-callback';
+
+  /// Get appropriate redirect URL based on platform
+  /// Uses deep link for both Mobile and Desktop (requires protocol registration on Windows)
+  static String? get oauthRedirectUrl {
+    if (kIsWeb) return null;
+    return emailRedirectUrl;
+  }
 
   /// Sign up a new user with email and password.
   /// First name and last name are stored in user metadata.
@@ -143,13 +150,15 @@ class AuthService {
 
   /// Sign in with Google OAuth.
   /// This handles both sign-in and sign-up - new users are automatically created.
+  /// Opens browser for OAuth flow on all platforms (mobile, desktop, web).
   Future<bool> signInWithGoogle() async {
     try {
+      debugPrint('AuthService: Starting Google OAuth flow');
       final response = await _client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo:
-            emailRedirectUrl, // Explicitly set redirect URL to match AndroidManifest
+        redirectTo: oauthRedirectUrl,
       );
+      debugPrint('AuthService: Google OAuth initiated: $response');
       return response;
     } catch (e) {
       debugPrint('Google Sign In Error: $e');
@@ -159,12 +168,15 @@ class AuthService {
 
   /// Sign in with Apple OAuth.
   /// This handles both sign-in and sign-up - new users are automatically created.
+  /// Opens browser for OAuth flow on all platforms (mobile, desktop, web).
   Future<bool> signInWithApple() async {
     try {
+      debugPrint('AuthService: Starting Apple OAuth flow');
       final response = await _client.auth.signInWithOAuth(
         OAuthProvider.apple,
-        redirectTo: emailRedirectUrl,
+        redirectTo: oauthRedirectUrl,
       );
+      debugPrint('AuthService: Apple OAuth initiated: $response');
       return response;
     } catch (e) {
       debugPrint('Apple Sign In Error: $e');

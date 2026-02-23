@@ -2,8 +2,11 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// Service for showing native Android/iOS push notifications.
+/// Service for showing native notifications on Android/iOS/Windows.
 /// Used for important events like auth, attendance warnings, etc.
+/// - Android: Uses notification channels
+/// - iOS: Uses Darwin notification settings
+/// - Windows: Uses Windows Toast Notifications (Windows 10+)
 class NotificationService {
   // Singleton
   static final NotificationService _instance = NotificationService._internal();
@@ -29,9 +32,17 @@ class NotificationService {
   static const int _reminderNotificationId = 100;
 
   /// Initialize the notification service.
-  /// Call this in main() after Supabase initialization.
+  /// Call this in main() after window initialization.
+  /// Supports Android, iOS, and Windows platforms.
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    // Skip initialization on unsupported platforms (only Android/iOS supported)
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      debugPrint('NotificationService: Platform not supported, skipping');
+      _isInitialized = true;
+      return;
+    }
 
     // Android initialization settings
     const androidSettings = AndroidInitializationSettings(
@@ -45,7 +56,7 @@ class NotificationService {
       requestSoundPermission: true,
     );
 
-    const initSettings = InitializationSettings(
+    final initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
@@ -61,7 +72,9 @@ class NotificationService {
     }
 
     _isInitialized = true;
-    debugPrint('NotificationService initialized');
+    debugPrint(
+      'NotificationService initialized for ${Platform.operatingSystem}',
+    );
   }
 
   /// Create Android notification channels

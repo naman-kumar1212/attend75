@@ -100,7 +100,15 @@ class LectureSlotsService {
 
   /// Update an existing lecture slot.
   Future<bool> updateLectureSlot(String id, Map<String, dynamic> data) async {
+    final userId = SupabaseService.userId;
+    if (userId == null) {
+      debugPrint('Update Lecture Slot Error: user not authenticated');
+      return false;
+    }
+
     try {
+      // Include user_id to satisfy RLS 'with check' clause
+      data['user_id'] = userId;
       await _client.from('lecture_slots').update(data).eq('id', id);
       return true;
     } catch (e) {

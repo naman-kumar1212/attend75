@@ -32,9 +32,6 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Web related
-lib/generated_plugin_registrant.dart
-
 # Symbolication related
 app.*.symbols
 
@@ -65,17 +62,6 @@ app.*.map.json
 # macOS specific
 /macos/Flutter/ephemeral
 /macos/Runner/GeneratedPluginRegistrant.*
-
-# Windows specific
-/windows/flutter/ephemeral
-/windows/flutter/generated_plugin_registrant.cc
-/windows/flutter/generated_plugin_registrant.h
-/windows/runner/resources/
-
-# Linux specific
-/linux/flutter/ephemeral
-/linux/flutter/generated_plugin_registrant.cc
-/linux/flutter/generated_plugin_registrant.h
 
 # Env files
 .env

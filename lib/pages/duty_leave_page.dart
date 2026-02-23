@@ -215,97 +215,127 @@ class _DutyLeavePageState extends State<DutyLeavePage> {
 
     final bool hasNoData = approvedRecords.isEmpty && missedRecords.isEmpty;
 
-    return SingleChildScrollView(
-      padding: responsive.contentPaddingWithNav,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Page Header
-          Text(
-            'Duty Leave',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Manage your duty leaves and missed lectures',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 24),
+    // Desktop: Use simple pagePadding (no extra top space since AppBar is not transparent)
+    // Mobile: Use contentPaddingWithNav (accounts for transparent glass app bar)
+    final padding = responsive.isDesktop
+        ? responsive.pagePadding.copyWith(bottom: 24)
+        : responsive.contentPaddingWithNav;
 
-          // Empty State
-          if (hasNoData)
-            _buildFullEmptyState(context)
-          else ...[
-            // SECTION 1: Approved Duty Leaves
-            _buildSectionHeader(
-              context,
-              'Approved Duty Leaves',
-              LucideIcons.checkCircle,
-              const Color(0xFF2ECC71),
-              approvedRecords.length,
-            ),
-            const SizedBox(height: 12),
-            if (approvedRecords.isEmpty)
-              _buildEmptyState(context, 'No approved duty leaves yet.')
-            else
-              Column(
-                children: [
-                  for (int i = 0; i < approvedRecords.length; i++) ...[
-                    _buildApprovedCard(
-                      context,
-                      subjects.firstWhere(
-                        (s) => s.id == approvedRecords[i].subjectId,
-                        orElse: () =>
-                            Subject(id: '', name: 'Unknown', daysOfWeek: []),
-                      ),
-                      approvedRecords[i],
-                    ),
-                    if (i < approvedRecords.length - 1)
-                      const SizedBox(height: 12),
-                  ],
-                ],
-              ),
-
-            const SizedBox(height: 28),
-
-            // SECTION 2: Lectures Missed
-            _buildSectionHeader(
-              context,
-              'Lectures Missed',
-              LucideIcons.alertCircle,
-              colorScheme.error,
-              missedRecords.length,
-            ),
-            const SizedBox(height: 12),
-            if (missedRecords.isEmpty)
-              _buildEmptyState(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SingleChildScrollView(
+        padding: padding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Page Header
+            Text(
+              'Duty Leave',
+              style: Theme.of(
                 context,
-                'No missed lectures. Mark attendance from Home to see them here.',
-              )
-            else
-              Column(
-                children: [
-                  for (int i = 0; i < missedRecords.length; i++) ...[
-                    _buildMissedCard(
-                      context,
-                      subjects.firstWhere(
-                        (s) => s.id == missedRecords[i].subjectId,
-                        orElse: () =>
-                            Subject(id: '', name: 'Unknown', daysOfWeek: []),
-                      ),
-                      missedRecords[i],
-                    ),
-                    if (i < missedRecords.length - 1)
-                      const SizedBox(height: 12),
-                  ],
-                ],
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Manage your duty leaves and missed lectures',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // Empty State
+            if (hasNoData)
+              _buildFullEmptyState(context)
+            else ...[
+              // SECTION 1: Approved Duty Leaves
+              _buildSectionHeader(
+                context,
+                'Approved Duty Leaves',
+                LucideIcons.checkCircle,
+                const Color(0xFF2ECC71),
+                approvedRecords.length,
+              ),
+              const SizedBox(height: 12),
+              if (approvedRecords.isEmpty)
+                _buildEmptyState(context, 'No approved duty leaves yet.')
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    // Calculate card width: aim for 3-4 cards per row
+                    final cardCount = width > 1200
+                        ? 4
+                        : (width > 800 ? 3 : (width > 500 ? 2 : 1));
+                    final spacing = 16.0;
+                    final cardWidth =
+                        (width - (spacing * (cardCount - 1))) / cardCount;
+                    return Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: approvedRecords.map((record) {
+                        final subject = subjects.firstWhere(
+                          (s) => s.id == record.subjectId,
+                          orElse: () =>
+                              Subject(id: '', name: 'Unknown', daysOfWeek: []),
+                        );
+                        return SizedBox(
+                          width: cardWidth,
+                          child: _buildApprovedCard(context, subject, record),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+
+              const SizedBox(height: 28),
+
+              // SECTION 2: Lectures Missed
+              _buildSectionHeader(
+                context,
+                'Lectures Missed',
+                LucideIcons.alertCircle,
+                colorScheme.error,
+                missedRecords.length,
+              ),
+              const SizedBox(height: 12),
+              if (missedRecords.isEmpty)
+                _buildEmptyState(
+                  context,
+                  'No missed lectures. Mark attendance from Home to see them here.',
+                )
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    // Calculate card width: aim for 3-4 cards per row
+                    final cardCount = width > 1200
+                        ? 4
+                        : (width > 800 ? 3 : (width > 500 ? 2 : 1));
+                    final spacing = 16.0;
+                    final cardWidth =
+                        (width - (spacing * (cardCount - 1))) / cardCount;
+                    return Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: missedRecords.map((record) {
+                        final subject = subjects.firstWhere(
+                          (s) => s.id == record.subjectId,
+                          orElse: () =>
+                              Subject(id: '', name: 'Unknown', daysOfWeek: []),
+                        );
+                        return SizedBox(
+                          width: cardWidth,
+                          child: _buildMissedCard(context, subject, record),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -414,10 +444,14 @@ class _DutyLeavePageState extends State<DutyLeavePage> {
     AttendanceRecord record,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark
+        ? colorScheme.surfaceContainer
+        : colorScheme.surface;
+
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
         boxShadow: [
@@ -428,27 +462,33 @@ class _DutyLeavePageState extends State<DutyLeavePage> {
           ),
         ],
       ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header: Subject Name + Status Badge
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         subject.name,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                          height: 1.2,
                         ),
                       ),
                     ),
-                    _buildBadge('Duty', const Color(0xFF2ECC71)),
+                    const SizedBox(width: 12),
+                    _buildBadge('Duty Leave', const Color(0xFF2ECC71)),
                   ],
                 ),
                 const SizedBox(height: 8),
+                // Date row
                 Row(
                   children: [
                     Icon(
@@ -494,7 +534,7 @@ class _DutyLeavePageState extends State<DutyLeavePage> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           IconButton(
             icon: Icon(
               LucideIcons.undo2,
@@ -520,10 +560,14 @@ class _DutyLeavePageState extends State<DutyLeavePage> {
     AttendanceRecord record,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark
+        ? colorScheme.surfaceContainer
+        : colorScheme.surface;
+
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
         boxShadow: [
@@ -534,65 +578,62 @@ class _DutyLeavePageState extends State<DutyLeavePage> {
           ),
         ],
       ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: Subject Name + Status Badge
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            subject.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        _buildBadge('Absent', colorScheme.error),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          LucideIcons.calendar,
-                          size: 14,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatDate(record.date),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  subject.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              _buildBadge('Absent', colorScheme.error),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Date row
+          Row(
+            children: [
+              Icon(
+                LucideIcons.calendar,
+                size: 14,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _formatDate(record.date),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          // Divider
+          Container(
+            height: 1,
+            color: colorScheme.outline.withValues(alpha: 0.1),
+          ),
           const SizedBox(height: 12),
+          // Convert button
           SizedBox(
             width: double.infinity,
             child: TextButton(
               onPressed: () => _showConvertToDutyDialog(record, subject),
               style: TextButton.styleFrom(
                 foregroundColor: colorScheme.primary,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(
-                    color: colorScheme.outline.withValues(alpha: 0.3),
-                  ),
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 8),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

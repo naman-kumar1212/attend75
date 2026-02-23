@@ -9,6 +9,7 @@ import '../widgets/animated_interactions.dart';
 import '../utils/ui_constants.dart';
 import '../utils/animations.dart';
 import '../utils/snackbar_helper.dart';
+import '../utils/responsive.dart';
 import '../main.dart'; // For MainNavigator tab switching
 import '../models.dart';
 
@@ -25,6 +26,7 @@ class _HomePageState extends State<HomePage> {
     final provider = context.watch<AttendanceProvider>();
     final colorScheme = Theme.of(context).colorScheme;
     final today = DateTime.now().toIso8601String().split('T')[0];
+    final responsive = context.responsive;
 
     // Get today's lecture slots (sorted by time) - only those with valid subjects
     final allLectureSlots = provider.getLectureSlotsForDate(today);
@@ -33,235 +35,274 @@ class _HomePageState extends State<HomePage> {
         .toList();
     final enhancedStats = provider.getAttendanceStats();
 
-    // Content extends behind glass header, needs top padding to push visible content below
-    // Design buffer: 24dp for visual breathing room below glass header
-    final topPadding =
-        MediaQuery.of(context).viewPadding.top + kToolbarHeight + 74;
+    // Use responsive padding - adjusts automatically for mobile vs desktop
+    final contentPadding = responsive.contentPaddingWithNav;
 
     return SingleChildScrollView(
       // Unified Scroll Parent with Physics
       physics: const BouncingScrollPhysics(),
-      // Padding: Top pushes content below glass header, Bottom for scrolling past nav bar
-      padding: EdgeInsets.fromLTRB(20, topPadding, 20, 90),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Removed SizedBox(height: 24) as it's handled by padding
-            FadeInAnimation(
-              duration: UIConstants.animationNormal,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20), // Generous padding
-                decoration: BoxDecoration(
-                  color: colorScheme.surface, // White/Surface
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: colorScheme.outline.withValues(
-                      alpha: 0.3,
-                    ), // Subtle grey border
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: 0.05,
-                      ), // Soft diffuse shadow
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left Side (Expanded)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header: Icon + "Today"
-                          Row(
-                            children: [
-                              Icon(
-                                LucideIcons.calendar,
-                                size: 16,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Today',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400, // Light weight
-                                  color: colorScheme.onSurfaceVariant, // Grey
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8), // Spacer
-                          // Main Date
-                          Text(
-                            _formatDate(DateTime.now()),
-                            style: TextStyle(
-                              fontSize: 24, // Large
-                              fontWeight: FontWeight.bold, // Bold
-                              color: colorScheme.onSurface, // High contrast
-                              height: 1.2,
-                            ),
-                            maxLines: 2,
-                          ),
-                          const SizedBox(height: 12), // Spacer
-                          // Sub-Label: Icon + "Classes"
-                          Row(
-                            children: [
-                              Icon(
-                                LucideIcons.bookOpen,
-                                size: 16,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Classes',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+      // Only vertical padding - scrollbar should reach window edge
+      padding: EdgeInsets.only(
+        top: contentPadding.top,
+        bottom: contentPadding.bottom,
+      ),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: responsive.isDesktop ? double.infinity : 1200,
+          ),
+          // Horizontal padding applied inside the constraint for proper content margins
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: contentPadding.left),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FadeInAnimation(
+                  duration: UIConstants.animationNormal,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20), // Generous padding
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface, // White/Surface
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colorScheme.outline.withValues(
+                          alpha: 0.3,
+                        ), // Subtle grey border
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: 0.05,
+                          ), // Soft diffuse shadow
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-
-                    const SizedBox(width: 12), // Min 12px margin from text
-                    // Right Side: Briefcase + Count
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Briefcase and Count row (aligned at top)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        // Left Side (Expanded)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header: Icon + "Today"
+                              Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.calendar,
+                                    size: 16,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Today',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight:
+                                          FontWeight.w400, // Light weight
+                                      color:
+                                          colorScheme.onSurfaceVariant, // Grey
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8), // Spacer
+                              // Main Date
+                              Text(
+                                _formatDate(DateTime.now()),
+                                style: TextStyle(
+                                  fontSize: 24, // Large
+                                  fontWeight: FontWeight.bold, // Bold
+                                  color: colorScheme.onSurface, // High contrast
+                                  height: 1.2,
+                                ),
+                                maxLines: 2,
+                              ),
+                              const SizedBox(height: 12), // Spacer
+                              // Sub-Label: Icon + "Classes"
+                              Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.bookOpen,
+                                    size: 16,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Classes',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 12), // Min 12px margin from text
+                        // Right Side: Briefcase + Count
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Icon(
-                                LucideIcons.briefcase,
-                                size: 20,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              todaysLectureSlots.length.toString().padLeft(
-                                2,
-                                '0',
-                              ), // "04" style
-                              style: TextStyle(
-                                fontSize: 40, // Very Large
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme
-                                    .primary, // Primary color for emphasis
-                                height: 1.0,
-                              ),
+                            // Briefcase and Count row (aligned at top)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Icon(
+                                    LucideIcons.briefcase,
+                                    size: 20,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  todaysLectureSlots.length.toString().padLeft(
+                                    2,
+                                    '0',
+                                  ), // "04" style
+                                  style: TextStyle(
+                                    fontSize: 40, // Very Large
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme
+                                        .primary, // Primary color for emphasis
+                                    height: 1.0,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: UIConstants.spacing32),
-
-            // Attendance Overview
-            FadeInAnimation(
-              duration: UIConstants.animationNormal,
-              delay: const Duration(milliseconds: 100),
-              child: AttendanceOverview(stats: enhancedStats),
-            ),
-            const SizedBox(height: 32),
-
-            // Today's Classes Section
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4, // Reduced horizontal padding as parent has 16
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Heading
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8), // 8px top margin
-                    child: Text(
-                      "Today's Classes",
-                      style: TextStyle(
-                        fontSize: 24, // Approx 24-28px
-                        fontWeight: FontWeight.w700, // Bold
-                      ),
-                    ),
                   ),
-                  const SizedBox(height: 28), // 28px gap
-                  if (todaysLectureSlots.isEmpty) ...[
-                    // State A: Empty State
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "No classes scheduled for today!",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface.withValues(
-                                alpha: 0.75,
-                              ),
-                            ),
-                            textAlign: TextAlign.center,
+                ),
+                SizedBox(height: UIConstants.spacing32),
+
+                // Attendance Overview
+                FadeInAnimation(
+                  duration: UIConstants.animationNormal,
+                  delay: const Duration(milliseconds: 100),
+                  child: AttendanceOverview(stats: enhancedStats),
+                ),
+                const SizedBox(height: 32),
+
+                // Today's Classes Section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal:
+                        4, // Reduced horizontal padding as parent has 16
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Heading
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8), // 8px top margin
+                        child: Text(
+                          "Today's Classes",
+                          style: TextStyle(
+                            fontSize: 24, // Approx 24-28px
+                            fontWeight: FontWeight.w700, // Bold
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Enjoy your free day 🎉",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: colorScheme.onSurface.withValues(
-                                alpha: 0.65,
-                              ),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ] else ...[
-                    // State B: Populated State - Show lecture slots with timing
-                    Column(
-                      children: [
-                        for (
-                          int index = 0;
-                          index < todaysLectureSlots.length;
-                          index++
-                        ) ...[
-                          _buildLectureSlotItem(
-                            context,
-                            todaysLectureSlots[index],
-                            index,
+                      const SizedBox(height: 28), // 28px gap
+                      if (todaysLectureSlots.isEmpty) ...[
+                        // State A: Empty State
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "No classes scheduled for today!",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.75,
+                                  ),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Enjoy your free day 🎉",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.65,
+                                  ),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
-                          // Add spacer if not last item
-                          if (index < todaysLectureSlots.length - 1)
-                            const SizedBox(height: 12),
-                        ],
+                        ),
+                      ] else if (responsive.isDesktop) ...[
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final width = constraints.maxWidth;
+                            final cardWidth =
+                                (width - 32) /
+                                3; // 3 columns, 16px spacing (2 gaps)
+                            return Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              children: todaysLectureSlots.asMap().entries.map((
+                                entry,
+                              ) {
+                                final index = entry.key;
+                                final slot = entry.value;
+                                return SizedBox(
+                                  width: cardWidth,
+                                  child: _buildLectureSlotItem(
+                                    context,
+                                    slot,
+                                    index,
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                      ] else ...[
+                        // State B: Populated State - Show lecture slots with timing
+                        Column(
+                          children: [
+                            for (
+                              int index = 0;
+                              index < todaysLectureSlots.length;
+                              index++
+                            ) ...[
+                              _buildLectureSlotItem(
+                                context,
+                                todaysLectureSlots[index],
+                                index,
+                              ),
+                              // Add spacer if not last item
+                              if (index < todaysLectureSlots.length - 1)
+                                const SizedBox(height: 12),
+                            ],
+                          ],
+                        ),
                       ],
-                    ),
-                  ],
-                ],
-              ),
+                    ],
+                  ),
+                ),
+                // Bottom Padding handled by SingleChildScrollView padding
+              ],
             ),
-            // Bottom Padding handled by SingleChildScrollView padding
-          ],
+          ),
         ),
       ),
     );
@@ -300,7 +341,9 @@ class _HomePageState extends State<HomePage> {
     final status = provider.getLectureSlotStatus(lectureSlot.id, today);
     final attendanceData = provider.getSubjectAttendanceData(subject.id);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -313,7 +356,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,87 +595,96 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(6),
           ),
 
-          if (status == null) ...[
-            const SizedBox(height: 16),
-            // Section D: Action Row (Present / Absent)
-            Row(
-              children: [
-                // Present Button
-                Expanded(
-                  child: _buildActionButton(
-                    context: context,
-                    label: 'Present',
-                    icon: LucideIcons.check,
-                    color: const Color(0xFF22C55E), // Green
-                    onTap: () async {
-                      try {
-                        await context
-                            .read<AttendanceProvider>()
-                            .markLectureAttendance(
-                              lectureSlotId: lectureSlot.id,
-                              date: today,
-                              status: 'present',
-                            );
-                      } catch (e) {
-                        if (context.mounted) {
-                          SnackbarHelper.show(
-                            context,
-                            'Failed to mark attendance. Please try again.',
-                            icon: LucideIcons.alertCircle,
-                          );
-                        }
-                      }
-                    },
-                    isSelected: false,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Absent Button
-                Expanded(
-                  child: _buildActionButton(
-                    context: context,
-                    label: 'Absent',
-                    icon: LucideIcons.x,
-                    color: const Color(0xFFEF4444), // Red
-                    onTap: () async {
-                      try {
-                        await context
-                            .read<AttendanceProvider>()
-                            .markLectureAttendance(
-                              lectureSlotId: lectureSlot.id,
-                              date: today,
-                              status: 'absent',
-                            );
-                        if (context.mounted) {
-                          SnackbarHelper.show(
-                            context,
-                            'Absent: ${subject.name}',
-                            icon: LucideIcons.userMinus,
-                            action: SnackBarAction(
-                              label: 'APPLY DUTY LEAVE',
-                              textColor: Colors.amber,
-                              onPressed: () {
-                                MainNavigator.switchToTab(3);
+          // Animated Shrink Section: Action Buttons
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            child: status == null
+                ? Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      // Section D: Action Row (Present / Absent)
+                      Row(
+                        children: [
+                          // Present Button
+                          Expanded(
+                            child: _buildActionButton(
+                              context: context,
+                              label: 'Present',
+                              icon: LucideIcons.check,
+                              color: const Color(0xFF22C55E), // Green
+                              onTap: () async {
+                                try {
+                                  await context
+                                      .read<AttendanceProvider>()
+                                      .markLectureAttendance(
+                                        lectureSlotId: lectureSlot.id,
+                                        date: today,
+                                        status: 'present',
+                                      );
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    SnackbarHelper.show(
+                                      context,
+                                      'Failed to mark attendance. Please try again.',
+                                      icon: LucideIcons.alertCircle,
+                                    );
+                                  }
+                                }
                               },
+                              isSelected: false,
                             ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          SnackbarHelper.show(
-                            context,
-                            'Failed to mark attendance. Please try again.',
-                            icon: LucideIcons.alertCircle,
-                          );
-                        }
-                      }
-                    },
-                    isSelected: false,
-                  ),
-                ),
-              ],
-            ),
-          ],
+                          ),
+                          const SizedBox(width: 12),
+                          // Absent Button
+                          Expanded(
+                            child: _buildActionButton(
+                              context: context,
+                              label: 'Absent',
+                              icon: LucideIcons.x,
+                              color: const Color(0xFFEF4444), // Red
+                              onTap: () async {
+                                try {
+                                  await context
+                                      .read<AttendanceProvider>()
+                                      .markLectureAttendance(
+                                        lectureSlotId: lectureSlot.id,
+                                        date: today,
+                                        status: 'absent',
+                                      );
+                                  if (context.mounted) {
+                                    SnackbarHelper.show(
+                                      context,
+                                      'Absent: ${subject.name}',
+                                      icon: LucideIcons.userMinus,
+                                      action: SnackBarAction(
+                                        label: 'APPLY DUTY LEAVE',
+                                        textColor: Colors.amber,
+                                        onPressed: () {
+                                          MainNavigator.switchToTab(3);
+                                        },
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    SnackbarHelper.show(
+                                      context,
+                                      'Failed to mark attendance. Please try again.',
+                                      icon: LucideIcons.alertCircle,
+                                    );
+                                  }
+                                }
+                              },
+                              isSelected: false,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );
@@ -674,6 +726,8 @@ class _HomePageState extends State<HomePage> {
     final textColor = isSelected ? Colors.white : color;
     final iconColor = isSelected ? Colors.white : color;
 
+    final isDesktop = Responsive.isDesktop(context);
+
     return ScaleTap(
       onTap: onTap,
       child: Material(
@@ -681,7 +735,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(12),
         // InkWell inside for ripple
         child: Container(
-          height: 48, // Fix 3: Large height
+          height: isDesktop ? 36 : 48, // Reduced height for desktop
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -690,14 +744,14 @@ class _HomePageState extends State<HomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: iconColor),
-              const SizedBox(width: 8),
+              Icon(icon, size: isDesktop ? 16 : 18, color: iconColor),
+              SizedBox(width: isDesktop ? 6 : 8),
               Text(
                 label,
                 style: TextStyle(
                   color: textColor,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: isDesktop ? 13 : 14,
                 ),
               ),
             ],

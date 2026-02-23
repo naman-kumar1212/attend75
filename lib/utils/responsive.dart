@@ -10,15 +10,23 @@ enum PhoneSize {
 }
 
 class Responsive {
+  /// Breakpoint for desktop layout (NavigationRail appears at this width)
+  static const double desktopBreakpoint = 600;
+  static const double tabletBreakpoint = 900;
+
   static DeviceType deviceType(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width >= desktopBreakpoint) return DeviceType.desktop;
     return DeviceType.mobile;
   }
 
-  static bool isMobile(BuildContext context) => true;
+  static bool isMobile(BuildContext context) =>
+      deviceType(context) == DeviceType.mobile;
 
-  static bool isTablet(BuildContext context) => false;
+  static bool isTablet(BuildContext context) => false; // Not used currently
 
-  static bool isDesktop(BuildContext context) => false;
+  static bool isDesktop(BuildContext context) =>
+      deviceType(context) == DeviceType.desktop;
 
   /// Get phone size classification based on screen width
   static PhoneSize phoneSize(BuildContext context) {
@@ -65,6 +73,8 @@ class Responsive {
     T? tablet,
     T? desktop,
   }) {
+    if (isDesktop(context)) return desktop ?? tablet ?? mobile;
+    if (isTablet(context)) return tablet ?? mobile;
     return mobile;
   }
 }
@@ -78,13 +88,23 @@ class ResponsiveValues {
   DeviceType get deviceType => Responsive.deviceType(context);
 
   EdgeInsets get pagePadding => isDesktop
-      ? const EdgeInsets.all(32)
+      ? const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 24)
       : isTablet
       ? const EdgeInsets.all(24)
       : const EdgeInsets.all(20); // 20px horizontal/vertical for mobile
 
   EdgeInsets get contentPaddingWithNav {
-    // Pages handle their own top padding (content extends behind glass header)
+    // Desktop: No transparent app bar, content doesn't extend behind
+    // No top padding needed - content starts immediately after AppBar
+    final width = MediaQuery.of(context).size.width;
+    debugPrint('ResponsiveValues: width=$width, isDesktop=$isDesktop');
+    if (isDesktop) {
+      final result = pagePadding.copyWith(top: 24, bottom: 24);
+      debugPrint('ResponsiveValues: Using DESKTOP padding: $result');
+      return result;
+    }
+
+    // Mobile: Pages handle their own top padding (content extends behind glass header)
     // Use viewPadding.top to get real status bar height
     // Design buffer: 24dp for visual breathing room below glass header
     final topPadding =
@@ -92,12 +112,18 @@ class ResponsiveValues {
     // Bottom: device safe area + navbar height (approx 80dp) + extra spacing
     final bottomSafeArea = MediaQuery.of(context).viewPadding.bottom;
     final bottomPadding = bottomSafeArea + 80 + 16; // navbar + spacing
-    return pagePadding.copyWith(top: topPadding, bottom: bottomPadding);
+    final result = pagePadding.copyWith(top: topPadding, bottom: bottomPadding);
+    debugPrint('ResponsiveValues: Using MOBILE padding: $result');
+    return result;
   }
 
   /// Bottom padding for content that sits above the bottom navbar
   /// Uses actual device insets for cross-device compatibility
   double get bottomNavPadding {
+    // Desktop: No bottom navbar, just standard padding
+    if (isDesktop) return 24;
+
+    // Mobile: Account for bottom navigation bar
     final bottomSafeArea = MediaQuery.of(context).viewPadding.bottom;
     return bottomSafeArea + 80 + 16; // navbar height + safe area + spacing
   }

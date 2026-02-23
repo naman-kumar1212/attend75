@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_links/app_links.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/settings_provider.dart';
@@ -22,7 +24,6 @@ import 'providers/auth_provider.dart';
 import 'config/supabase_config.dart';
 
 void main() async {
-  // Ensure Flutter bindings are initialized before any platform calls
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Supabase
@@ -34,7 +35,6 @@ void main() async {
   // Initialize notification service
   await NotificationService().initialize();
 
-  // to ensure the app UI is rendered before any permission dialogs appear.
   runApp(
     MultiProvider(
       providers: [
@@ -56,9 +56,16 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  late AppLinks _appLinks;
+  StreamSubscription? _linkSubscription;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize deep link handling for OAuth callbacks
+    _initDeepLinks();
+
     // Global Supabase auth state listener
     Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       final event = data.event;
@@ -138,6 +145,51 @@ class _MyAppState extends State<MyApp> {
         }
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// Initialize deep link handling for OAuth callbacks
+  Future<void> _initDeepLinks() async {
+    _appLinks = AppLinks();
+
+    // Handle deep link if app was started from a link
+    try {
+      final initialLink = await _appLinks.getInitialLink();
+      if (initialLink != null) {
+        debugPrint('App started with deep link: $initialLink');
+        _handleDeepLink(initialLink);
+      }
+    } catch (e) {
+      debugPrint('Error getting initial deep link: $e');
+    }
+
+    // Listen for deep links while app is running
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (Uri uri) {
+        debugPrint('Received deep link: $uri');
+        _handleDeepLink(uri);
+      },
+      onError: (e) {
+        debugPrint('Deep link stream error: $e');
+      },
+    );
+  }
+
+  /// Handle incoming deep links (OAuth callbacks)
+  Future<void> _handleDeepLink(Uri uri) async {
+    if (!uri.toString().startsWith('com.namankumar.attend75://')) return;
+
+    // Extract session from OAuth callback URL
+    try {
+      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+    } catch (_) {
+      // Session extraction failed - auth state listener will not fire
+    }
   }
 
   /// Global navigator key for auth state navigation

@@ -1,6 +1,6 @@
 name: attend75
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
@@ -28,6 +28,7 @@ dependencies:
   flutter_local_notifications: ^19.5.0
   table_calendar: ^3.2.0
   supabase_flutter: ^2.12.0
+  app_links: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -49,12 +50,10 @@ flutter_launcher_icons:
     background_color: "#ffffff"
     theme_color: "#ffffff"
 
-
 flutter:
   uses-material-design: true
   assets:
     - lib/assets/
-    - web/icons/
 
 flutter_native_splash:
   # Light mode - white background with light-specific image
@@ -62,18 +61,17 @@ flutter_native_splash:
   image: "lib/assets/app_icon_light.png"
   android: true
   ios: true
-  
+
   # Dark mode - black background with dark-specific image
   color_dark: "#000000"
   image_dark: "lib/assets/app_icon.png"
-  
+
   # Android 12+ specific
   android_12:
     image: "lib/assets/app_icon_light.png"
     color: "#FFFFFF"
     image_dark: "lib/assets/app_icon.png"
     color_dark: "#000000"
-  
+
   # Ensure background is filled (not transparent)
   fullscreen: true
-

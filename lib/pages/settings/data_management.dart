@@ -9,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../../providers/attendance_provider.dart';
 import '../../utils/snackbar_helper.dart';
+import '../../utils/responsive.dart';
 
 class DataManagement extends StatefulWidget {
   const DataManagement({super.key});
@@ -186,26 +187,187 @@ class _DataManagementState extends State<DataManagement> {
     }
   }
 
+  Widget _buildDeleteItem(BuildContext context, IconData icon, String label) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: colorScheme.error.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: colorScheme.error),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _clearAllData(AttendanceProvider provider) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Data'),
-        content: const Text(
-          'This will permanently delete all your subjects, attendance records, and settings. This action cannot be undone. Make sure to export your data first if you want to keep it.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete Everything'),
+          contentPadding: const EdgeInsets.all(0),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Warning Icon Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                decoration: BoxDecoration(
+                  color: colorScheme.error.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.error.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        LucideIcons.alertTriangle,
+                        size: 32,
+                        color: colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Delete All Data?',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                child: Column(
+                  children: [
+                    Text(
+                      'This action will permanently delete:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    // Items list
+                    _buildDeleteItem(context, LucideIcons.book, 'All subjects'),
+                    const SizedBox(height: 8),
+                    _buildDeleteItem(
+                      context,
+                      LucideIcons.calendar,
+                      'Attendance records',
+                    ),
+                    const SizedBox(height: 8),
+                    _buildDeleteItem(
+                      context,
+                      LucideIcons.settings,
+                      'App settings',
+                    ),
+                    const SizedBox(height: 20),
+                    // Warning box
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            LucideIcons.info,
+                            size: 18,
+                            color: Colors.amber,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Export your data first if you want to keep a backup.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Actions
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colorScheme.onSurface,
+                          side: BorderSide(
+                            color: colorScheme.outline.withValues(alpha: 0.3),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.error,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Delete All'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
 
     if (confirmed == true) {
@@ -224,6 +386,7 @@ class _DataManagementState extends State<DataManagement> {
   Widget build(BuildContext context) {
     // Listen to provider to rebuild when data changes
     final provider = Provider.of<AttendanceProvider>(context);
+    final isDesktop = context.responsive.isDesktop;
 
     return Card(
       elevation: 0,
@@ -267,7 +430,7 @@ class _DataManagementState extends State<DataManagement> {
                 // Use vertical layout for narrow screens (< 320dp available width)
                 final isNarrow = constraints.maxWidth < 320;
                 final buttonPadding = EdgeInsets.symmetric(
-                  vertical: 14,
+                  vertical: isDesktop ? 20 : 14,
                   horizontal: isNarrow ? 12 : 16,
                 );
 
@@ -359,7 +522,7 @@ class _DataManagementState extends State<DataManagement> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.onSurface,
                 side: BorderSide(color: Theme.of(context).dividerColor),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: isDesktop ? 20 : 12),
                 minimumSize: const Size(double.infinity, 0),
               ),
             ),
@@ -421,7 +584,7 @@ class _DataManagementState extends State<DataManagement> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
                 side: BorderSide(color: Theme.of(context).colorScheme.error),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: isDesktop ? 20 : 12),
                 minimumSize: const Size(double.infinity, 0),
               ),
             ),

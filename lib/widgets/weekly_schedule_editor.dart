@@ -245,7 +245,7 @@ class _WeeklyScheduleEditorState extends State<WeeklyScheduleEditor> {
           ),
         ),
 
-        // Day tiles (Monday to Sunday order)
+        // Day tiles (Monday to Saturday)
         ...[
           Weekday.monday,
           Weekday.tuesday,
@@ -253,7 +253,6 @@ class _WeeklyScheduleEditorState extends State<WeeklyScheduleEditor> {
           Weekday.thursday,
           Weekday.friday,
           Weekday.saturday,
-          Weekday.sunday,
         ].map(
           (weekday) => DayScheduleTile(
             weekday: weekday,
@@ -323,7 +322,7 @@ class _WeeklyScheduleEditorState extends State<WeeklyScheduleEditor> {
 }
 
 /// A single day's schedule tile with expandable lecture slots.
-class DayScheduleTile extends StatelessWidget {
+class DayScheduleTile extends StatefulWidget {
   final Weekday weekday;
   final List<EditableLectureSlot> slots;
   final VoidCallback onAddSlot;
@@ -340,9 +339,49 @@ class DayScheduleTile extends StatelessWidget {
   });
 
   @override
+  State<DayScheduleTile> createState() => _DayScheduleTileState();
+}
+
+class _DayScheduleTileState extends State<DayScheduleTile>
+    with SingleTickerProviderStateMixin {
+  bool _isExpanded = false;
+  late AnimationController _controller;
+  late Animation<double> _iconTurns;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _iconTurns = Tween<double>(
+      begin: 0.0,
+      end: 0.5,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final hasSlots = slots.isNotEmpty;
+    final hasSlots = widget.slots.isNotEmpty;
     final isSmall = Responsive.isSmallPhone(context);
 
     final dayBoxSize = Responsive.phoneValue<double>(
@@ -375,122 +414,200 @@ class DayScheduleTile extends StatelessWidget {
               : colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.symmetric(
-            horizontal: isSmall ? 12 : 16,
-            vertical: 0,
-          ),
-          leading: Container(
-            width: dayBoxSize,
-            height: dayBoxSize,
-            decoration: BoxDecoration(
-              color: hasSlots
-                  ? colorScheme.primary.withValues(alpha: 0.1)
-                  : colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(isSmall ? 8 : 10),
-            ),
-            child: Center(
-              child: Text(
-                weekday.shortName,
-                style: TextStyle(
-                  fontSize: dayFontSize,
-                  fontWeight: FontWeight.w600,
-                  color: hasSlots
-                      ? colorScheme.primary
-                      : colorScheme.onSurfaceVariant,
-                ),
+      child: Column(
+        children: [
+          // Header Row (Clickable)
+          InkWell(
+            onTap: _handleTap,
+            borderRadius: BorderRadius.circular(isSmall ? 10 : 12),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmall ? 12 : 16,
+                vertical: 12, // Default visual density padding equivalent
               ),
-            ),
-          ),
-          title: Text(
-            weekday.fullName,
-            style: TextStyle(
-              fontSize: titleFontSize,
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (hasSlots)
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isSmall ? 6 : 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(isSmall ? 6 : 8),
-                  ),
-                  child: Text(
-                    '${slots.length}',
-                    style: TextStyle(
-                      fontSize: isSmall ? 10 : 12,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onPrimaryContainer,
+              child: Row(
+                children: [
+                  // Leading: Day Box
+                  Container(
+                    width: dayBoxSize,
+                    height: dayBoxSize,
+                    decoration: BoxDecoration(
+                      color: hasSlots
+                          ? colorScheme.primary.withValues(alpha: 0.1)
+                          : colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(isSmall ? 8 : 10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.weekday.shortName,
+                        style: TextStyle(
+                          fontSize: dayFontSize,
+                          fontWeight: FontWeight.w600,
+                          color: hasSlots
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              SizedBox(width: isSmall ? 4 : 8),
-              Icon(Icons.expand_more, size: isSmall ? 20 : 24),
-            ],
-          ),
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                isSmall ? 12 : 16,
-                0,
-                isSmall ? 12 : 16,
-                isSmall ? 12 : 16,
-              ),
-              child: Column(
-                children: [
-                  // Existing slots
-                  ...slots.asMap().entries.map(
-                    (entry) => Padding(
-                      padding: EdgeInsets.only(bottom: isSmall ? 6 : 8),
-                      child: LectureSlotTile(
-                        slot: entry.value,
-                        onChanged: (updatedSlot) =>
-                            onSlotChanged(entry.key, updatedSlot),
-                        onDelete: () => onRemoveSlot(entry.key),
+                  SizedBox(width: isSmall ? 12 : 16), // Standard list tile gap
+                  // Title
+                  Expanded(
+                    child: Text(
+                      widget.weekday.fullName,
+                      style: TextStyle(
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
 
-                  // Add lecture button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: onAddSlot,
-                      icon: Icon(Icons.add, size: isSmall ? 16 : 18),
-                      label: Text(
-                        'Add Lecture',
-                        style: TextStyle(fontSize: isSmall ? 12 : 14),
+                  // Trailing: Count Badge + Expand Icon
+                  if (hasSlots) ...[
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmall ? 6 : 8,
+                        vertical: 2,
                       ),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(
-                          vertical: isSmall ? 8 : 10,
-                        ),
-                        foregroundColor: colorScheme.primary,
-                        side: BorderSide(
-                          color: colorScheme.primary.withValues(alpha: 0.5),
-                          style: BorderStyle.solid,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(isSmall ? 8 : 10),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(isSmall ? 6 : 8),
+                      ),
+                      child: Text(
+                        '${widget.slots.length}',
+                        style: TextStyle(
+                          fontSize: isSmall ? 10 : 12,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onPrimaryContainer,
                         ),
                       ),
+                    ),
+                    SizedBox(width: isSmall ? 4 : 8),
+                  ],
+                  RotationTransition(
+                    turns: _iconTurns,
+                    child: Icon(
+                      Icons.expand_more,
+                      size: isSmall ? 20 : 24,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Content Body (Expandable)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topCenter,
+            curve: Curves.easeInOut,
+            child: _isExpanded
+                ? Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      isSmall ? 12 : 16,
+                      0,
+                      isSmall ? 12 : 16,
+                      isSmall ? 12 : 16,
+                    ),
+                    child: Column(
+                      children: [
+                        // Existing slots
+                        ...widget.slots.asMap().entries.map(
+                          (entry) => Padding(
+                            padding: EdgeInsets.only(bottom: isSmall ? 6 : 8),
+                            child: LectureSlotTile(
+                              slot: entry.value,
+                              onChanged: (updatedSlot) =>
+                                  widget.onSlotChanged(entry.key, updatedSlot),
+                              onDelete: () => widget.onRemoveSlot(entry.key),
+                            ),
+                          ),
+                        ),
+
+                        // Add lecture + Delete button row (60-40 split)
+                        Row(
+                          children: [
+                            // Add Lecture button (60%)
+                            Expanded(
+                              flex: 6,
+                              child: OutlinedButton.icon(
+                                onPressed: widget.onAddSlot,
+                                icon: Icon(Icons.add, size: isSmall ? 16 : 18),
+                                label: Text(
+                                  'Add Lecture',
+                                  style: TextStyle(fontSize: isSmall ? 12 : 14),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: isSmall ? 8 : 10,
+                                  ),
+                                  foregroundColor: colorScheme.primary,
+                                  side: BorderSide(
+                                    color: colorScheme.primary.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    style: BorderStyle.solid,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      isSmall ? 8 : 10,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (hasSlots) ...[
+                              SizedBox(width: isSmall ? 6 : 8),
+                              // Delete button (40%)
+                              Expanded(
+                                flex: 4,
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    // Remove the last slot
+                                    widget.onRemoveSlot(
+                                      widget.slots.length - 1,
+                                    );
+                                  },
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    size: isSmall ? 16 : 18,
+                                  ),
+                                  label: Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                      fontSize: isSmall ? 12 : 14,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isSmall ? 8 : 10,
+                                    ),
+                                    foregroundColor: colorScheme.error,
+                                    side: BorderSide(
+                                      color: colorScheme.error.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                      style: BorderStyle.solid,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        isSmall ? 8 : 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
       ),
     );
   }
@@ -514,6 +631,9 @@ class LectureSlotTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isSmall = Responsive.isSmallPhone(context);
 
+    // Fixed height for all row elements ensuring alignment
+    const double componentHeight = 42.0;
+
     final tilePadding = Responsive.phoneValue<double>(
       context,
       small: 8,
@@ -524,7 +644,7 @@ class LectureSlotTile extends StatelessWidget {
       context,
       small: 12,
       medium: 13,
-      large: 13, // reduced max size slightly
+      large: 14,
     );
 
     return Container(
@@ -536,17 +656,15 @@ class LectureSlotTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Time picker button
+          // Time picker button (flex 3)
           Expanded(
             flex: 3,
             child: InkWell(
               onTap: () => _pickTime(context),
               borderRadius: BorderRadius.circular(isSmall ? 6 : 8),
               child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmall ? 8 : 10, // Reduced from 12
-                  vertical: isSmall ? 8 : 10,
-                ),
+                height: componentHeight,
+                padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 12),
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(isSmall ? 6 : 8),
@@ -558,10 +676,10 @@ class LectureSlotTile extends StatelessWidget {
                   children: [
                     Icon(
                       LucideIcons.clock,
-                      size: isSmall ? 14 : 16, // Reduced from 18
+                      size: isSmall ? 14 : 16,
                       color: colorScheme.onSurfaceVariant,
                     ),
-                    SizedBox(width: isSmall ? 4 : 6), // Reduced from 8
+                    SizedBox(width: isSmall ? 4 : 8),
                     Expanded(
                       child: Text(
                         isSmall ? slot.shortFormattedTime : slot.formattedTime,
@@ -581,11 +699,12 @@ class LectureSlotTile extends StatelessWidget {
 
           SizedBox(width: isSmall ? 6 : 8),
 
-          // Duration dropdown
-          SizedBox(
-            width: isSmall ? 65 : 80, // Reduced from 70/85
+          // Duration dropdown (flex 2)
+          Expanded(
+            flex: 2,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: isSmall ? 4 : 8),
+              height: componentHeight,
+              padding: EdgeInsets.symmetric(horizontal: isSmall ? 6 : 8),
               decoration: BoxDecoration(
                 color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(isSmall ? 6 : 8),
@@ -593,6 +712,7 @@ class LectureSlotTile extends StatelessWidget {
                   color: colorScheme.outline.withValues(alpha: 0.3),
                 ),
               ),
+              alignment: Alignment.center,
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
                   value: slot.durationHours,
@@ -600,11 +720,12 @@ class LectureSlotTile extends StatelessWidget {
                   isDense: true,
                   icon: Icon(
                     Icons.keyboard_arrow_down,
-                    size: isSmall ? 16 : 18,
+                    size: isSmall ? 18 : 20,
                   ),
                   style: TextStyle(
-                    fontSize: isSmall ? 11 : 13,
+                    fontSize: isSmall ? 12 : 13,
                     color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
                   ),
                   items: [
                     DropdownMenuItem(
@@ -614,6 +735,14 @@ class LectureSlotTile extends StatelessWidget {
                     DropdownMenuItem(
                       value: 2,
                       child: Text(isSmall ? '2h' : '2 hrs'),
+                    ),
+                    DropdownMenuItem(
+                      value: 3,
+                      child: Text(isSmall ? '3h' : '3 hrs'),
+                    ),
+                    DropdownMenuItem(
+                      value: 4,
+                      child: Text(isSmall ? '4h' : '4 hrs'),
                     ),
                   ],
                   onChanged: (value) {
@@ -631,31 +760,6 @@ class LectureSlotTile extends StatelessWidget {
               ),
             ),
           ),
-
-          SizedBox(width: isSmall ? 4 : 8),
-
-          // Delete button
-          IconButton(
-            onPressed: onDelete,
-            padding: EdgeInsets.all(isSmall ? 6 : 8),
-            constraints: BoxConstraints(
-              minWidth: isSmall ? 32 : 36, // Reduced slightly
-              minHeight: isSmall ? 32 : 36,
-            ),
-            icon: Icon(
-              Icons.delete_outline,
-              size: isSmall ? 18 : 20,
-              color: colorScheme.error,
-            ),
-            style: IconButton.styleFrom(
-              backgroundColor: colorScheme.errorContainer.withValues(
-                alpha: 0.3,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(isSmall ? 6 : 8),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -665,10 +769,26 @@ class LectureSlotTile extends StatelessWidget {
     final picked = await showTimePicker(
       context: context,
       initialTime: slot.startTime,
+      initialEntryMode: TimePickerEntryMode.dial,
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
+        return Localizations.override(
+          context: context,
+          locale: const Locale('en', 'US'),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              timePickerTheme: TimePickerThemeData(
+                hourMinuteShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            child: MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(alwaysUse24HourFormat: false),
+              child: child!,
+            ),
+          ),
         );
       },
     );

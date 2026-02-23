@@ -35,7 +35,7 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="com.example.attend75" android:host="login-callback"/>
+                <data android:scheme="com.namankumar.attend75" android:host="login-callback"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

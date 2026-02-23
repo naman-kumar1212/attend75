@@ -15,7 +15,7 @@ class SupabaseService {
   static User? get currentUser => client.auth.currentUser;
 
   /// Get the current user's ID
-  static String? get userId => currentUser?.id;
+  static String? get userId => currentUser?.id ?? currentSession?.user.id;
 
   /// Check if a user is currently authenticated WITH a valid session.
   /// With email confirmation enabled, user may exist but session is null until verified.

@@ -88,8 +88,10 @@ class AttendanceService {
     } catch (e) {
       debugPrint('SUPABASE ERROR - Upsert Attendance: $e');
       debugPrint(
-        'Subject ID: $subjectId, Date: $date, Status: $status, Slot: $lectureSlotId',
+        'Details - Subject ID: $subjectId, Date: $date, Status: $status, Slot: $lectureSlotId',
       );
+      // Re-throw so the provider knows it failed, or return null to signal failure
+      // Returning null is the current contract
       return null;
     }
   }

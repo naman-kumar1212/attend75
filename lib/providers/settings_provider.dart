@@ -178,7 +178,16 @@ class SettingsProvider extends ChangeNotifier {
 
   /// Called when user logs in.
   Future<void> onUserLogin() async {
-    await syncWithSupabase();
+    // Wait for session to be established (max 2 seconds)
+    int attempts = 0;
+    while (!SupabaseService.isAuthenticated && attempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      attempts++;
+    }
+
+    if (SupabaseService.isAuthenticated) {
+      await syncWithSupabase();
+    }
   }
 
   /// Called when user logs out.

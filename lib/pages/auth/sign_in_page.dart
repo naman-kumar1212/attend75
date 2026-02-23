@@ -384,31 +384,6 @@ class _SignInPageState extends State<SignInPage> {
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // Continue as Guest
-                  Center(
-                    child: TextButton(
-                      onPressed: () async {
-                        final authProvider = context.read<AuthProvider>();
-                        await authProvider.continueAsGuest();
-                        if (mounted) {
-                          // ignore: use_build_context_synchronously
-                          Navigator.pushReplacementNamed(context, '/dashboard');
-                        }
-                      },
-                      child: Text(
-                        'Continue as Guest',
-                        style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.6),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

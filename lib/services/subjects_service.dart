@@ -29,12 +29,50 @@ class SubjectsService {
   /// Create a new subject.
   /// Returns the created subject data.
   Future<Map<String, dynamic>?> createSubject(Map<String, dynamic> data) async {
+    // Get userId with detailed logging
     final userId = SupabaseService.userId;
-    if (userId == null) return null;
+    final session = SupabaseService.currentSession;
+    final currentUser = SupabaseService.currentUser;
+
+    debugPrint(
+      'CreateSubject: userId=$userId, hasSession=${session != null}, hasCurrentUser=${currentUser != null}',
+    );
+
+    if (userId == null) {
+      debugPrint('CreateSubject FAILED: userId is null');
+      debugPrint('  - hasSession: ${session != null}');
+      debugPrint('  - currentUser: $currentUser');
+
+      // Try to refresh the session if we have one but userId is still null
+      if (session != null) {
+        debugPrint('CreateSubject: Attempting session refresh...');
+        try {
+          await _client.auth.refreshSession();
+          final refreshedUserId = SupabaseService.userId;
+          if (refreshedUserId != null) {
+            debugPrint(
+              'CreateSubject: Session refresh successful, userId=$refreshedUserId',
+            );
+            data['user_id'] = refreshedUserId;
+
+            final response = await _client
+                .from('subjects')
+                .insert(data)
+                .select()
+                .single();
+            return response;
+          }
+        } catch (refreshError) {
+          debugPrint('CreateSubject: Session refresh failed: $refreshError');
+        }
+      }
+      return null;
+    }
 
     try {
       // Ensure user_id is set
       data['user_id'] = userId;
+      debugPrint('CreateSubject: Inserting with user_id=$userId, data=$data');
 
       final response = await _client
           .from('subjects')
@@ -42,10 +80,17 @@ class SubjectsService {
           .select()
           .single();
 
+      debugPrint('CreateSubject SUCCESS: ${response['id']}');
       return response;
     } catch (e) {
       debugPrint('SUPABASE ERROR - Create Subject: $e');
+      if (e is PostgrestException) {
+        debugPrint(
+          'Postgrest Error Details: ${e.message} code: ${e.code} details: ${e.details}',
+        );
+      }
       debugPrint('User ID: ${SupabaseService.userId}');
+      debugPrint('Session valid: ${SupabaseService.hasValidSession}');
       debugPrint('Data attempted: $data');
       return null;
     }
@@ -53,7 +98,15 @@ class SubjectsService {
 
   /// Update an existing subject.
   Future<bool> updateSubject(String id, Map<String, dynamic> data) async {
+    final userId = SupabaseService.userId;
+    if (userId == null) {
+      debugPrint('Update Subject Error: user not authenticated');
+      return false;
+    }
+
     try {
+      // Include user_id to satisfy RLS 'with check' clause
+      data['user_id'] = userId;
       await _client.from('subjects').update(data).eq('id', id);
       return true;
     } catch (e) {

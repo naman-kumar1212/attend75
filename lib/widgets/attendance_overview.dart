@@ -3,6 +3,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../models.dart';
 import '../utils/ui_constants.dart';
+import '../utils/responsive.dart';
 import 'animated_interactions.dart';
 
 class AttendanceOverview extends StatelessWidget {
@@ -15,6 +16,31 @@ class AttendanceOverview extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isAtRisk = stats.attendancePercentage < 75;
+    final isDesktop = Responsive.isDesktop(context);
+
+    // Card widgets
+    final overallCard = _OverviewCard(
+      icon: LucideIcons.target,
+      label: 'Overall Attendance',
+      value: '${stats.attendancePercentage.round()}%',
+      color: isAtRisk ? const Color(0xFFE74C3C) : const Color(0xFF2ECC71),
+      showProgress: true,
+      progress: stats.attendancePercentage / 100,
+    );
+
+    final classesAttendedCard = _OverviewCard(
+      icon: LucideIcons.bookOpen,
+      label: 'Classes Attended',
+      value: '${stats.totalClassesAttended} / ${stats.totalClassesHeld}',
+      color: colorScheme.primary,
+    );
+
+    final totalClassesCard = _OverviewCard(
+      icon: LucideIcons.trendingUp,
+      label: 'Total Classes',
+      value: '${stats.totalClassesHeld}',
+      color: colorScheme.tertiary,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,29 +60,31 @@ class AttendanceOverview extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Vertical Stack of Cards
-        _OverviewCard(
-          icon: LucideIcons.target,
-          label: 'Overall Attendance',
-          value: '${stats.attendancePercentage.round()}%',
-          color: isAtRisk ? const Color(0xFFE74C3C) : const Color(0xFF2ECC71),
-          showProgress: true,
-          progress: stats.attendancePercentage / 100,
-        ),
-        const SizedBox(height: 16),
-        _OverviewCard(
-          icon: LucideIcons.bookOpen,
-          label: 'Classes Attended',
-          value: '${stats.totalClassesAttended} / ${stats.totalClassesHeld}',
-          color: colorScheme.primary,
-        ),
-        const SizedBox(height: 16),
-        _OverviewCard(
-          icon: LucideIcons.trendingUp,
-          label: 'Total Classes',
-          value: '${stats.totalClassesHeld}',
-          color: colorScheme.tertiary, // Using tertiary for variety/neutrality
-        ),
+        // Desktop: Horizontal Row of Cards with equal heights
+        // Mobile: Vertical Stack of Cards
+        if (isDesktop)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: overallCard),
+                const SizedBox(width: 16),
+                Expanded(child: classesAttendedCard),
+                const SizedBox(width: 16),
+                Expanded(child: totalClassesCard),
+              ],
+            ),
+          )
+        else
+          Column(
+            children: [
+              overallCard,
+              const SizedBox(height: 16),
+              classesAttendedCard,
+              const SizedBox(height: 16),
+              totalClassesCard,
+            ],
+          ),
       ],
     );
   }

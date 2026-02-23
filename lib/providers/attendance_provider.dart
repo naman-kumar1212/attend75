@@ -195,8 +195,23 @@ class AttendanceProvider extends ChangeNotifier {
     );
     await clearLocalData();
 
-    // Then sync with the user's cloud data
-    await syncWithSupabase();
+    // Wait for session to be established (max 2 seconds)
+    // This fixes a race condition where onUserLogin is called before
+    // SupabaseService.isAuthenticated becomes true
+    int attempts = 0;
+    while (!SupabaseService.isAuthenticated && attempts < 10) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      attempts++;
+    }
+
+    if (SupabaseService.isAuthenticated) {
+      debugPrint('AttendanceProvider: Session confirmed, starting sync...');
+      await syncWithSupabase();
+    } else {
+      debugPrint(
+        'AttendanceProvider: Session NOT found after waiting, sync aborted.',
+      );
+    }
   }
 
   /// Called when user logs out - clear all data.
@@ -886,32 +901,57 @@ class AttendanceProvider extends ChangeNotifier {
     String date,
     String reason,
   ) async {
-    if (!SupabaseService.isAuthenticated) {
-      throw Exception('You must be logged in to request duty leave');
-    }
+    if (SupabaseService.isAuthenticated) {
+      // Server first
+      final result = await _attendanceService.upsertAttendance(
+        subjectId: subjectId,
+        date: date,
+        status: 'absent',
+        dutyRequested: true,
+        dutyReason: reason,
+      );
 
-    // Server first
-    final result = await _attendanceService.upsertAttendance(
-      subjectId: subjectId,
-      date: date,
-      status: 'absent',
-      dutyRequested: true,
-      dutyReason: reason,
-    );
+      if (result == null) {
+        throw Exception('Failed to request duty leave in database');
+      }
 
-    if (result == null) {
-      throw Exception('Failed to request duty leave in database');
-    }
+      final serverRecord = AttendanceRecord.fromSupabase(result);
+      final index = _attendanceRecords.indexWhere(
+        (r) => r.subjectId == subjectId && r.date == date,
+      );
 
-    final serverRecord = AttendanceRecord.fromSupabase(result);
-    final index = _attendanceRecords.indexWhere(
-      (r) => r.subjectId == subjectId && r.date == date,
-    );
-
-    if (index != -1) {
-      _attendanceRecords[index] = serverRecord;
+      if (index != -1) {
+        _attendanceRecords[index] = serverRecord;
+      } else {
+        _attendanceRecords.add(serverRecord);
+      }
     } else {
-      _attendanceRecords.add(serverRecord);
+      // Guest mode: Update locally
+      debugPrint(
+        'RequestDutyLeave (Guest Mode): $subjectId on $date - $reason',
+      );
+
+      final index = _attendanceRecords.indexWhere(
+        (r) => r.subjectId == subjectId && r.date == date,
+      );
+
+      final localRecord = AttendanceRecord(
+        id: index != -1
+            ? _attendanceRecords[index].id
+            : 'local_${DateTime.now().millisecondsSinceEpoch}',
+        subjectId: subjectId,
+        date: date,
+        status: 'absent',
+        dutyRequested: true,
+        dutyReason: reason,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+
+      if (index != -1) {
+        _attendanceRecords[index] = localRecord;
+      } else {
+        _attendanceRecords.add(localRecord);
+      }
     }
 
     notifyListeners();
@@ -919,10 +959,6 @@ class AttendanceProvider extends ChangeNotifier {
   }
 
   Future<void> approveDutyLeave(String subjectId, String date) async {
-    if (!SupabaseService.isAuthenticated) {
-      throw Exception('You must be logged in to approve duty leave');
-    }
-
     final index = _attendanceRecords.indexWhere(
       (r) => r.subjectId == subjectId && r.date == date,
     );
@@ -930,61 +966,99 @@ class AttendanceProvider extends ChangeNotifier {
         ? _attendanceRecords[index].dutyReason ?? ''
         : '';
 
-    // Server first
-    final result = await _attendanceService.markDutyLeave(
-      subjectId: subjectId,
-      date: date,
-      reason: reason,
-      approved: true,
-    );
-
-    if (result == null) {
-      throw Exception('Failed to approve duty leave in database');
-    }
-
-    if (index != -1) {
-      _attendanceRecords[index] = AttendanceRecord.fromSupabase(result);
-      notifyListeners();
-      await _saveRecordsToCache();
-
-      // Show native notification
-      final subjectName = _subjects
-          .firstWhere(
-            (s) => s.id == subjectId,
-            orElse: () => Subject(id: '', name: 'Subject', daysOfWeek: []),
-          )
-          .name;
-      NotificationService().showDutyLeaveApplied(
-        subjectName: subjectName,
+    if (SupabaseService.isAuthenticated) {
+      // Server first
+      final result = await _attendanceService.markDutyLeave(
+        subjectId: subjectId,
         date: date,
+        reason: reason,
+        approved: true,
       );
+
+      if (result == null) {
+        throw Exception('Failed to approve duty leave in database');
+      }
+
+      if (index != -1) {
+        _attendanceRecords[index] = AttendanceRecord.fromSupabase(result);
+      }
+    } else {
+      // Guest mode: Update locally
+      debugPrint('ApproveDutyLeave (Guest Mode): $subjectId on $date');
+
+      if (index != -1) {
+        final existingRecord = _attendanceRecords[index];
+        _attendanceRecords[index] = AttendanceRecord(
+          id: existingRecord.id,
+          subjectId: subjectId,
+          date: date,
+          status: 'duty-leave',
+          dutyRequested: true,
+          dutyApproved: true,
+          dutyReason: reason,
+          createdAt: existingRecord.createdAt,
+          updatedAt: DateTime.now().toIso8601String(),
+        );
+      }
     }
+
+    notifyListeners();
+    await _saveRecordsToCache();
+
+    // Show native notification
+    final subjectName = _subjects
+        .firstWhere(
+          (s) => s.id == subjectId,
+          orElse: () => Subject(id: '', name: 'Subject', daysOfWeek: []),
+        )
+        .name;
+    NotificationService().showDutyLeaveApplied(
+      subjectName: subjectName,
+      date: date,
+    );
   }
 
   Future<void> cancelDutyRequest(String subjectId, String date) async {
-    if (!SupabaseService.isAuthenticated) {
-      throw Exception('You must be logged in to cancel duty leave');
-    }
-
-    // Server first
-    final result = await _attendanceService.cancelDutyLeave(
-      subjectId: subjectId,
-      date: date,
-    );
-
-    if (result == null) {
-      throw Exception('Failed to cancel duty leave in database');
-    }
-
     final index = _attendanceRecords.indexWhere(
       (r) => r.subjectId == subjectId && r.date == date,
     );
 
-    if (index != -1) {
-      _attendanceRecords[index] = AttendanceRecord.fromSupabase(result);
-      notifyListeners();
-      await _saveRecordsToCache();
+    if (SupabaseService.isAuthenticated) {
+      // Server first
+      final result = await _attendanceService.cancelDutyLeave(
+        subjectId: subjectId,
+        date: date,
+      );
+
+      if (result == null) {
+        throw Exception('Failed to cancel duty leave in database');
+      }
+
+      if (index != -1) {
+        _attendanceRecords[index] = AttendanceRecord.fromSupabase(result);
+      }
+    } else {
+      // Guest mode: Update locally
+      debugPrint('CancelDutyRequest (Guest Mode): $subjectId on $date');
+
+      if (index != -1) {
+        final existingRecord = _attendanceRecords[index];
+        _attendanceRecords[index] = AttendanceRecord(
+          id: existingRecord.id,
+          subjectId: subjectId,
+          date: date,
+          status: 'absent',
+          dutyRequested: false,
+          dutyApproved: false,
+          dutyReason: null,
+          createdAt: existingRecord.createdAt,
+          updatedAt: DateTime.now().toIso8601String(),
+        );
+      }
     }
+
+    notifyListeners();
+    await _saveRecordsToCache();
   }
 
   Future<void> markAbsent(String subjectId, String date) async {

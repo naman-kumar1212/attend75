@@ -1,6 +1,7 @@
 -- ============================================
 -- Attend75 Storage Configuration
--- Migration: 003_storage
+-- Migration: 003_storage (IDEMPOTENT)
+-- Safe to run multiple times
 -- ============================================
 
 -- Create avatars bucket (public for easy access)
@@ -11,7 +12,14 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================
 -- STORAGE POLICIES
 -- Users can manage their own avatars
+-- Drop existing policies first for idempotency
 -- ============================================
+
+-- Drop all existing policies first
+DROP POLICY IF EXISTS "Users can upload own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Public avatar access" ON storage.objects;
 
 -- Policy: Users can upload their own avatar
 -- Avatar path format: {user_id}/avatar_{timestamp}.{ext}

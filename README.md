@@ -30,7 +30,7 @@ The application leverages **Supabase** for backend services (Auth, Database, Rea
 
 ## Tech Stack
 
-- **Framework**: [Flutter](https://flutter.dev) (Dart 3.x) - *3.10+*
+- **Framework**: [Flutter](https://flutter.dev) (Dart 3.x) — SDK `^3.10.1`
 - **Backend as a Service**: [Supabase](https://supabase.com)
   - **Database**: PostgreSQL with Row Level Security (RLS)
   - **Auth**: JWT-based secure authentication
@@ -40,6 +40,7 @@ The application leverages **Supabase** for backend services (Auth, Database, Rea
 - **Utilities**:
   - `flutter_local_notifications`: System-level alerts
   - `percent_indicator`: Visual data representation
+  - `table_calendar`: Calendar-based attendance history
   - `intl`: Date/Time formatting & localization
 
 ## Architecture
@@ -48,11 +49,11 @@ The project follows a clean, layered architecture emphasizing separation of conc
 
 ```mermaid
 graph TD
-    UI[UI Layer (Widgets)] -->|Events| Provider[Provider Layer (Business Logic)]
-    Provider -->|Calls| Service[Service Layer (Data Access)]
-    Service -->|Auth/Data| Supabase[Supabase Client]
-    Service -->|Cache| Local[Shared Preferences]
-    Supabase <-->|Sync| Cloud[(PostgreSQL)]
+    UI["UI Layer (Widgets)"] -->|Events| Provider["Provider Layer (Business Logic)"]
+    Provider -->|Calls| Service["Service Layer (Data Access)"]
+    Service -->|Auth/Data| Supabase["Supabase Client"]
+    Service -->|Cache| Local["Shared Preferences"]
+    Supabase <-->|Sync| Cloud[("PostgreSQL")]
 ```
 
 ### Layer Breakdown
@@ -118,15 +119,36 @@ graph TD
 
 ```text
 lib/
-├── config/         # App-wide constants & secrets
-├── pages/          # Full-screen widgets (Routes)
-│   ├── auth/       # Login, Signup, Forgot Password flows
-│   └── ...         # Dashboard, Settings, etc.
-├── providers/      # ChangeNotifier implementations (BLoC replacement)
-├── services/       # Raw data fetchers & singletons
-├── theme/          # AppTheme definitions (Light/Dark)
-├── utils/          # Helpers (Date formatting, Validators)
-└── widgets/        # Reusable UI components (Cards, Inputs)
+├── assets/              # App icons & screenshots
+├── config/              # Supabase config & secrets
+├── main.dart            # Entry point & app bootstrap
+├── models.dart          # Data models (Subject, AttendanceLog, etc.)
+├── pages/               # Full-screen route widgets
+│   ├── auth/            # Login, Signup, Forgot Password flows
+│   ├── settings/        # Notification & appearance settings
+│   ├── dashboard_page   # Analytics dashboard
+│   ├── home_page        # Daily attendance view
+│   ├── duty_leave_page  # Duty leave management
+│   ├── profile_page     # User profile
+│   └── manage_subjects  # Subject CRUD
+├── providers/           # ChangeNotifier state management
+│   ├── attendance_provider  # Attendance logic & sync
+│   ├── auth_provider        # Auth session & guest mode
+│   ├── settings_provider    # App-wide settings
+│   └── theme_provider       # Dark/Light/System themes
+├── services/            # Data access & external APIs
+│   ├── attendance_service   # Attendance CRUD
+│   ├── auth_service         # Supabase Auth
+│   ├── notification_service # Local notifications
+│   ├── profile_service      # User profile management
+│   └── ...                  # Subjects, Permissions, etc.
+├── theme/               # Theme definitions
+├── utils/               # Helpers (animations, calculations, responsiveness)
+└── widgets/             # Reusable UI components
+    ├── auth/            # Auth-specific widgets
+    ├── subject_card     # Subject attendance cards
+    ├── attendance_ring  # Circular progress indicators
+    └── ...              # Buttons, modals, layout helpers
 ```
 
 ## State Management
@@ -144,9 +166,7 @@ The application uses **Provider** for dependency injection and state management 
 |:---:|:---:|:---:|
 | **Android** | ✅ | First-class citizen |
 | **iOS** | ✅ | Fully supported |
-| **Web** | ✅ | Beta (Responsive) |
 | **macOS** | ✅ | Desktop-ready |
-| **Windows** | ✅ | Desktop-ready |
 
 ## Performance and Optimizations
 
@@ -172,15 +192,14 @@ The application uses **Provider** for dependency injection and state management 
 ## Future Improvements
 
 -   [ ] **Offline Queue**: Implement Hive/Isar for full offline-first capabilities for logged-in users.
--   [ ] **Calendar View**: A visual month-view for attendance history.
 -   [ ] **University Import**: Import timetables directly from university portals.
 -   [ ] **Class Notifications**: Geolocation-based reminders to mark attendance when entering campus.
 
 
 ## Author
 
-Developed by **Naman**.
-Connect on [LinkedIn](https://linkedin.com) or [GitHub](https://github.com).
+Developed by **Naman Kumar**.
+Connect on [GitHub](https://github.com/naman-kumar1212).
 
 ## License
 

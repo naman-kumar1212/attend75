@@ -1,7 +1,7 @@
 -- ============================================
 -- Attend75 Database Schema
 -- Migration: 001_initial_schema (IDEMPOTENT)
--- Safe to run on existing databases
+-- Safe to run multiple times on existing databases
 -- ============================================
 
 -- Required for gen_random_uuid()
@@ -37,6 +37,17 @@ CREATE TABLE IF NOT EXISTS public.subjects (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Add new column names for hours-based tracking (migration from class-based)
+-- These columns support both old (total_classes) and new (initial_hours_held) naming
+ALTER TABLE public.subjects ADD COLUMN IF NOT EXISTS initial_hours_held integer DEFAULT 0;
+ALTER TABLE public.subjects ADD COLUMN IF NOT EXISTS initial_hours_attended integer DEFAULT 0;
+
+-- Sync data from old columns to new columns (for existing data)
+UPDATE public.subjects 
+SET initial_hours_held = COALESCE(total_classes, 0),
+    initial_hours_attended = COALESCE(attended_classes, 0)
+WHERE initial_hours_held IS NULL OR initial_hours_held = 0;
 
 CREATE INDEX IF NOT EXISTS idx_subjects_user_id ON public.subjects(user_id);
 

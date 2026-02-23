@@ -103,7 +103,9 @@ class AppMenuDrawer extends StatelessWidget {
                       // Auth / Profile Actions
                       Consumer<AuthProvider>(
                         builder: (context, authProvider, _) {
-                          if (authProvider.isSignedIn) {
+                          // Authenticated user - show Profile
+                          if (authProvider.isSignedIn &&
+                              !authProvider.isGuest) {
                             return _buildMenuItem(
                               context: context,
                               icon: LucideIcons.user,
@@ -115,6 +117,7 @@ class AppMenuDrawer extends StatelessWidget {
                               },
                             );
                           } else {
+                            // Guest user or not signed in - show Sign In/Sign Up options
                             return Column(
                               children: [
                                 _buildMenuItem(
@@ -227,7 +230,8 @@ class AppMenuDrawer extends StatelessWidget {
                 // Footer
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, _) {
-                    if (authProvider.isSignedIn) {
+                    // Authenticated non-guest user - show Sign Out
+                    if (authProvider.isSignedIn && !authProvider.isGuest) {
                       return Column(
                         children: [
                           _buildSectionDivider(colorScheme),
@@ -274,6 +278,8 @@ class AppMenuDrawer extends StatelessWidget {
                         ],
                       );
                     }
+
+                    // Not signed in at all - just show version
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Text(
@@ -304,7 +310,7 @@ class AppMenuDrawer extends StatelessWidget {
     bool isDark,
     Color surfaceColor,
   ) {
-    if (authProvider.isSignedIn) {
+    if (authProvider.isSignedIn && !authProvider.isGuest) {
       final initials = authProvider.initials;
       final fullName = authProvider.fullName;
       final email = authProvider.email;
